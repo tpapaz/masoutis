@@ -1,0 +1,17 @@
+{
+  "name": "masoutis",
+  "version": "1.0.0",
+  "description": "Masoutis XLS to SQLITE",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-xlsx": "^0.17.2",
+    "sqlite": "^4.0.23",
+    "sqlite3": "^5.0.2",
+    "xls-to-json": "^2.1.0"
+  }
+}
