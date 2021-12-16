@@ -3,11 +3,13 @@ const fs = require("fs");
 const xls2json = require("xls-to-json");
 const csvToJson = require("convert-csv-to-json");
 const sqlite3 = require("sqlite3");
+const ftp = require("basic-ftp")
 const { open } = require("sqlite");
+const { ftpConfig} = require("./config.js");
 
 const http = require("http");
 const host = 'localhost';
-const port = 8000;
+const port = 4343;
 
 const requestListener = function (req, res) {
     res.writeHead(200);
@@ -15,20 +17,72 @@ const requestListener = function (req, res) {
 };
 
 const server = http.createServer(requestListener);
-server.listen(port, host, () => {
+server.listen(port, host, async () => {
     console.log(`Server is running on http://${host}:${port}`);
 
-    updateDB();
+    await updateFiles();
+    await updateDB();
 });
 
-function createDbConnection(filename) {
+let updateFiles = async () => {
+
+    async function connect() {
+        const client = new ftp.Client()
+        client.ftp.verbose = true
+        try {
+
+            await client.access(ftpConfig)
+            let list = await client.list();
+
+            // Delete planogram files from local directory
+            let planogramDir = path.join(path.join(__dirname, "data/planograms"));
+            fs.readdir(planogramDir, (err, files) => {
+                if (err) throw err;
+
+                for (const file of files) {
+
+                    if (path.extname(file) === ".xls") {
+                        fs.unlink(path.join(planogramDir, file), err => {
+                            if (err) throw err;
+                        });
+                    }
+                }
+            });
+
+            // Copy planograms from ftp to local dir
+            await client.downloadToDir(path.join(__dirname, "data/planograms"), 'evision ΠΛΑΝΟ');
+
+            // Get all files (not directories)
+            let barcodeFiles = list.filter(obj => {
+                return (obj.type === 1)
+            })
+
+            // Get latest file based on date modified.
+            let latest_file = barcodeFiles.reduce(function (r, a) {
+                return r.rawModifiedAt > a.rawModifiedAt ? r : a;
+            });
+
+            // Replace local file with the one from FTP
+            await client.downloadTo(path.join(__dirname, "data/barcodes/mas_new.csv"), "/"+latest_file.name);
+
+        }
+        catch(err) {
+            console.log(err)
+        }
+        client.close()
+    }
+
+    await connect();
+}
+
+let createDbConnection = filename => {
     return open({
         filename,
         driver: sqlite3.Database,
     });
-}
+};
 
-async function updateDB() {
+let updateDB = async () => {
     try {
         sqlite3.verbose();
         const db = await createDbConnection("./masoutisdb.sqlite");
@@ -47,7 +101,7 @@ async function updateDB() {
 }
 
 // -----------------------------------------------------
-async function createPlanogramsTable(db) {
+let createPlanogramsTable = async db => {
     try {
         await db.exec(`CREATE TABLE planograms (
                                                    "fk" TEXT NOT NULL,
@@ -62,12 +116,12 @@ async function createPlanogramsTable(db) {
     } catch (error) {
         throw error;
     }
-}
+};
 
 
 
 // Read xls files from planograms
-function readXLS(db) {
+let readXLS = db => {
     const directoryPath = path.join(__dirname, "data/planograms");
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
@@ -98,7 +152,7 @@ function readXLS(db) {
 }
 
 // insert records to table planograms
-async function insertPlanogramRecords(db, json, fk) {
+let insertPlanogramRecords = async (db, json, fk) => {
     try {
         let values = "";
         json.forEach((rec) => {
@@ -114,10 +168,10 @@ async function insertPlanogramRecords(db, json, fk) {
     } catch (error) {
         console.error(error);
     }
-}
+};
 
 
-async function createProductsTable(db) {
+let createProductsTable = async db => {
     try {
         await db.exec(`CREATE TABLE products (
                                                  "PLU" TEXT,
@@ -131,11 +185,11 @@ async function createProductsTable(db) {
     } catch (error) {
         throw error;
     }
-}
+};
 
 
 // Read CSV file
-function readCSV(db) {
+let readCSV = db => {
     const directoryPath = path.join(__dirname, "data");
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
@@ -159,9 +213,9 @@ function readCSV(db) {
             }
         });
     });
-}
+};
 
-async function insertBarcodeRecords(db, json) {
+let insertBarcodeRecords = async (db, json) => {
     try {
         let values = '';
         json.forEach((rec) => {
@@ -174,4 +228,4 @@ async function insertBarcodeRecords(db, json) {
     } catch (error) {
         console.error(error);
     }
-}
+};
