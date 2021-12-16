@@ -6,6 +6,7 @@ const sqlite3 = require("sqlite3");
 const ftp = require("basic-ftp")
 const { open } = require("sqlite");
 const { ftpConfig} = require("./config.js");
+const cron = require("node-cron");
 
 const http = require("http");
 const host = 'localhost';
@@ -14,14 +15,24 @@ const port = 4343;
 const requestListener = function (req, res) {
     res.writeHead(200);
     res.end("Masoutis service is running");
+
+
 };
 
 const server = http.createServer(requestListener);
 server.listen(port, host, async () => {
     console.log(`Server is running on http://${host}:${port}`);
 
-    await updateFiles();
-    await updateDB();
+    cron.schedule('0 0 */2 * * *', async () => {
+        console.log('Running a job every 2 hrs');
+
+        await updateFiles();
+        await updateDB();
+
+    }, {
+        scheduled: true,
+        timezone: "Europe/Athens"
+    });
 });
 
 let updateFiles = async () => {
@@ -117,8 +128,6 @@ let createPlanogramsTable = async db => {
         throw error;
     }
 };
-
-
 
 // Read xls files from planograms
 let readXLS = db => {
