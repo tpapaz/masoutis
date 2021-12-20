@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Masoutis service</title>
+</head>
+<body>
+<h3>Click to manually update DB</h3>
+
+<button id="updateBtn">Update DB</button>
+<br>
+<label id="status"></label>
+
+<script>
+    const updateBtn = document.getElementById("updateBtn");
+    const statusLabel = document.getElementById("status");
+
+    updateBtn.addEventListener('click', function() {
+        updateBtn.disabled = true;
+
+        fetch('/update', {method: 'POST'})
+            .then(response => response.text())
+            .then(text => {
+                    statusLabel.innerHTML += '\n' + text;
+                    updateBtn.disabled = false;
+                }
+            )
+    })
+</script>
+</body>
+</html>

@@ -7,32 +7,36 @@ const ftp = require("basic-ftp")
 const { open } = require("sqlite");
 const { ftpConfig} = require("./config.js");
 const cron = require("node-cron");
+const express = require("express");
+const app = express();
 
-const http = require("http");
-const host = 'localhost';
-const port = 4343;
+app.use(express.static('html'));
 
-const requestListener = function (req, res) {
-    res.writeHead(200);
-    res.end("Masoutis service is running");
+app.get('/', function(req, res) {
+    res.sendFile(__dirname + '/index.html');
+});
+
+app.post('/update', async function(request, response){
+
+    console.log("Started update");
+    await updateFiles();
+    await updateDB();
+    response.send("Update successful!");
+    console.log("Update successful");
+});
+
+app.listen(4343);
 
 
-};
+cron.schedule('0 0 *!/2 * * *', async () => {
+    console.log('Running a job every 2 hrs');
 
-const server = http.createServer(requestListener);
-server.listen(port, host, async () => {
-    console.log(`Server is running on http://${host}:${port}`);
+    await updateFiles();
+    await updateDB();
 
-    cron.schedule('0 0 */2 * * *', async () => {
-        console.log('Running a job every 2 hrs');
-
-        await updateFiles();
-        await updateDB();
-
-    }, {
-        scheduled: true,
-        timezone: "Europe/Athens"
-    });
+}, {
+    scheduled: true,
+    timezone: "Europe/Athens"
 });
 
 let updateFiles = async () => {
@@ -78,9 +82,10 @@ let updateFiles = async () => {
 
         }
         catch(err) {
-            console.log(err)
+            console.log(err);
+
         }
-        client.close()
+        client.close();
     }
 
     await connect();

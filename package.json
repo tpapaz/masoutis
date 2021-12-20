@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "basic-ftp": "^4.6.6",
+    "express": "^4.17.2",
     "node-xlsx": "^0.17.2",
     "sqlite": "^4.0.23",
     "sqlite3": "^5.0.2",
