@@ -100,7 +100,7 @@ let createDbConnection = filename => {
 let updateDB = async () => {
     try {
         sqlite3.verbose();
-        const db = await createDbConnection("./masoutisdb.sqlite");
+        const db = await createDbConnection(path.join(__dirname, "out/masoutisdb.sqlite"));
 
         await db.exec("DROP TABLE IF EXISTS products;");
         await createProductsTable(db);
