@@ -2,7 +2,7 @@
   "name": "masoutis",
   "version": "1.0.0",
   "description": "Masoutis XLS to SQLITE",
-  "main": "index.js",
+  "main": "masVisionCrawler.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
