@@ -83,7 +83,6 @@ let updateFiles = async () => {
         }
         catch(err) {
             console.log(err);
-
         }
         client.close();
     }
@@ -105,11 +104,11 @@ let updateDB = async () => {
 
         await db.exec("DROP TABLE IF EXISTS products;");
         await createProductsTable(db);
-        readCSV(db);
+        await readCSV(db);
 
         await db.exec("DROP TABLE IF EXISTS planograms;");
         await createPlanogramsTable(db);
-        readXLS(db);
+        await readXLS(db);
 
     } catch (error) {
         console.error(error);
@@ -135,7 +134,7 @@ let createPlanogramsTable = async db => {
 };
 
 // Read xls files from planograms
-let readXLS = db => {
+let readXLS = async db => {
     const directoryPath = path.join(__dirname, "data/planograms");
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
@@ -203,26 +202,28 @@ let createProductsTable = async db => {
 
 
 // Read CSV file
-let readCSV = db => {
-    const directoryPath = path.join(__dirname, "data");
+let readCSV = async db => {
+    const directoryPath = path.join(__dirname, "data/barcodes");
+    const parentPath = path.join(__dirname, "data");
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
             return console.log("Unable to scan directory: " + err);
         }
 
         files.forEach(async function ( file) {
+
             if (path.extname(file) === ".csv") {
 
                 // Append header line to csv and save to a new file in parent folder
-                let data = fs.readFileSync(directoryPath + '/barcodes/'+file); // Read existing contents into data
-                let fd = fs.openSync(directoryPath + '/'+file, 'w+');
+                let data = fs.readFileSync(directoryPath + '/'+file); // Read existing contents into data
+                let fd = fs.openSync(parentPath + '/'+file, 'w+');
                 let buffer = new Buffer.from('PLU|description|price|discount|action|extra\n');
 
                 fs.writeSync(fd, buffer, 0, buffer.length, 0); // Write new data
                 fs.writeSync(fd, data, 0, data.length, buffer.length); // Append old data
-                fs.close(fd);
+                fs.closeSync(fd);
 
-                let json = csvToJson.fieldDelimiter('|').getJsonFromCsv(directoryPath + '/'+file);
+                let json = csvToJson.fieldDelimiter('|').getJsonFromCsv(parentPath + '/'+file);
                 await insertBarcodeRecords(db, json);
             }
         });
