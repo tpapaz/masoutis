@@ -69,7 +69,7 @@ let updateFiles = async () => {
 
             // Get all files (not directories)
             let barcodeFiles = list.filter(obj => {
-                return (obj.type === 1)
+                return (obj.type === 1 && obj.name !== 'EshopItems.txt')
             })
 
             // Get latest file based on date modified.
@@ -224,6 +224,21 @@ let readCSV = async db => {
                 fs.closeSync(fd);
 
                 let json = csvToJson.fieldDelimiter('|').getJsonFromCsv(parentPath + '/'+file);
+
+                Object.keys(json).forEach(function(key){
+
+                    // Γραμμάρια
+                    if(json[key]['description'].match(/([0-9]+Γ)/)) {
+                        json[key]['description'] = json[key]['description'].replace(/(ΓΡ. )|(ΓΡ.)/, ' Γραμμάρια ');
+                        json[key]['description'] = json[key]['description'].replace(/(ΓΡ)$/, ' Γραμμάρια ');
+                    }
+
+                    // mL
+                    json[key]['description'] = json[key]['description'].replace(/(ML)/, 'mL'); // english M
+                    json[key]['description'] = json[key]['description'].replace(/(ΜL)/, 'mL'); // greek M
+
+                });
+
                 await insertBarcodeRecords(db, json);
             }
         });
