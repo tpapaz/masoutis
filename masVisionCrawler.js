@@ -20,7 +20,7 @@ app.get('/', function(req, res) {
 app.post('/update', async function(request, response){
 
     console.log("Started update");
-    await updateFiles();
+    //await updateFiles();
     await updateDB();
     response.send("Update successful!");
     console.log("Update successful");
@@ -114,7 +114,7 @@ let updateDB = async () => {
 
         await db.exec("DROP TABLE IF EXISTS planograms;");
         await createPlanogramsTable(db);
-        await readXLS(db);
+        await readXLS(db, descriptions);
 
     } catch (error) {
         console.error(error);
@@ -164,7 +164,7 @@ let parseDescriptions = async () => {
 }
 
 // Read xls files from planograms
-let readXLS = async db => {
+let readXLS = async (db, desc) => {
     const directoryPath = path.join(__dirname, "data/planograms");
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
@@ -185,6 +185,14 @@ let readXLS = async db => {
                         if (err) {
                             console.log(err);
                         } else {
+
+                            Object.keys(result).forEach(function(key){
+
+                                if (desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ']) ) {
+                                    result[key]['Προϊόν'] = desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ'])
+                                }
+
+                            });
                             await insertPlanogramRecords(db, result, fk);
                         }
                     }
