@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const xls2json = require("xls-to-json");
 const csvToJson = require("convert-csv-to-json");
+const readline = require('readline');
 const sqlite3 = require("sqlite3");
 const ftp = require("basic-ftp")
 const { open } = require("sqlite");
@@ -107,7 +108,9 @@ let updateDB = async () => {
 
         await db.exec("DROP TABLE IF EXISTS products;");
         await createProductsTable(db);
-        await readCSV(db);
+        const descriptions = await parseDescriptions();
+
+        await readCSV(db, descriptions);
 
         await db.exec("DROP TABLE IF EXISTS planograms;");
         await createPlanogramsTable(db);
@@ -135,6 +138,30 @@ let createPlanogramsTable = async db => {
         throw error;
     }
 };
+
+let parseDescriptions = async () => {
+
+    let descMap = new Map();
+    descMap = await processLineByLine(descMap);
+
+    async function processLineByLine(map) {
+        const fileStream = fs.createReadStream(path.join(__dirname,'/data/desc/desc.txt'), 'utf16le');
+
+        const rl = readline.createInterface({
+            input: fileStream,
+            crlfDelay: Infinity
+        });
+        // Note: we use the crlfDelay option to recognize all instances of CR LF
+        // ('\r\n') in input.txt as a single line break.
+
+        for await (const line of rl) {
+            let lineArr = line.split('\t', 2);
+            map.set(lineArr[0], lineArr[1]);
+        }
+        return map;
+    }
+    return descMap;
+}
 
 // Read xls files from planograms
 let readXLS = async db => {
@@ -205,7 +232,7 @@ let createProductsTable = async db => {
 
 
 // Read CSV file
-let readCSV = async db => {
+let readCSV = async (db, desc) => {
     const directoryPath = path.join(__dirname, "data/barcodes");
     const parentPath = path.join(__dirname, "data");
     fs.readdir(directoryPath, function (err, files) {
@@ -230,6 +257,10 @@ let readCSV = async db => {
 
                 Object.keys(json).forEach(function(key){
 
+                    if (desc.get(json[key]['PLU'])) {
+                        json[key]['description'] = desc.get(json[key]['PLU'])
+                    }
+
                     // Γραμμάρια
                     if(json[key]['description'].match(/([0-9]+Γ)/)) {
                         json[key]['description'] = json[key]['description'].replace(/(ΓΡ. )|(ΓΡ.)/, ' Γραμμάρια ');
@@ -239,6 +270,9 @@ let readCSV = async db => {
                     // mL
                     json[key]['description'] = json[key]['description'].replace(/(ML)/, 'mL'); // english M
                     json[key]['description'] = json[key]['description'].replace(/(ΜL)/, 'mL'); // greek M
+
+                    // Replace double quotes with single
+                    json[key]['description'] = json[key]['description'].replace(/"/g, "'");
 
                 });
 
@@ -252,7 +286,7 @@ let insertBarcodeRecords = async (db, json) => {
     try {
         let values = '';
         json.forEach((rec) => {
-            values += `('${rec.PLU}','${rec.description}','${rec.price}','${rec.discount}','${rec.action}','${rec.extra}'),`;
+            values += `("${rec.PLU}","${rec.description}","${rec.price}","${rec.discount}","${rec.action}","${rec.extra}"),`;
         });
 
         values = values.replace(/.$/, ";");
