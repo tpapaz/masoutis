@@ -80,6 +80,9 @@ let updateFiles = async () => {
             // Replace local file with the one from FTP
             await client.downloadTo(path.join(__dirname, "data/barcodes/mas_new.csv"), "/"+latest_file.name);
 
+            // Get TXT file
+            await client.downloadTo(path.join(__dirname, "data/desc/desc.txt"), "/EshopItems.txt");
+
         }
         catch(err) {
             console.log(err);
