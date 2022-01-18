@@ -191,6 +191,7 @@ let readXLS = async (db, desc) => {
                                 if (desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ']) ) {
                                     result[key]['Προϊόν'] = desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ'])
                                 }
+                                result[key]['Προϊόν'] = filterEntryDescription(result[key]['Προϊόν']);
 
                             });
                             await insertPlanogramRecords(db, result, fk);
@@ -264,26 +265,11 @@ let readCSV = async (db, desc) => {
                 let json = csvToJson.fieldDelimiter('|').getJsonFromCsv(parentPath + '/'+file);
 
                 Object.keys(json).forEach(function(key){
-
                     if (desc.get(json[key]['PLU'])) {
                         json[key]['description'] = desc.get(json[key]['PLU'])
                     }
-
-                    // Γραμμάρια
-                    if(json[key]['description'].match(/([0-9]+Γ)/)) {
-                        json[key]['description'] = json[key]['description'].replace(/(ΓΡ. )|(ΓΡ.)/, ' Γραμμάρια ');
-                        json[key]['description'] = json[key]['description'].replace(/(ΓΡ)$/, ' Γραμμάρια ');
-                    }
-
-                    // mL
-                    json[key]['description'] = json[key]['description'].replace(/(ML)/, 'mL'); // english M
-                    json[key]['description'] = json[key]['description'].replace(/(ΜL)/, 'mL'); // greek M
-
-                    // Replace double quotes with single
-                    json[key]['description'] = json[key]['description'].replace(/"/g, "'");
-
+                    json[key]['description'] = filterEntryDescription(json[key]['description']);
                 });
-
                 await insertBarcodeRecords(db, json);
             }
         });
@@ -303,4 +289,31 @@ let insertBarcodeRecords = async (db, json) => {
     } catch (error) {
         console.error(error);
     }
+};
+
+let filterEntryDescription = entry => {
+
+    // Γραμμάρια
+    if(entry.match(/([0-9]+Γ)|([0-9]+γ)/)) {
+        entry = entry.replace(/(ΓΡ. )|(ΓΡ.)/g, ' Γραμμάρια ');
+        entry = entry.replace(/(γρ. )|(γρ.)/g, ' Γραμμάρια ');
+        entry = entry.replace(/(ΓΡ)$/g, ' Γραμμάρια ');
+    }
+
+    // mL
+    entry = entry.replace(/(ML)/g, 'mL'); // english M
+    entry = entry.replace(/(ΜL)/g, 'mL'); // greek M
+
+    // lt
+    entry = entry.replace(/(lt.)/g, ' Λίτρα ');
+
+    // Τεμάχια
+    if(entry.match(/([0-9]+τεμ)/)) {
+        entry = entry.replace(/(τεμ.)/g, ' Τεμάχια ');
+    }
+
+    // Replace double quotes with single
+    entry = entry.replace(/"/g, "'");
+
+    return entry;
 };
