@@ -306,11 +306,15 @@ let filterEntryDescription = entry => {
 
     // lt
     entry = entry.replace(/(lt.)/g, ' Λίτρα ');
+    entry = entry.replace(/(1L)/g, ' 1 Λίτρο ');
 
     // Τεμάχια
     if(entry.match(/([0-9]+τεμ)/)) {
         entry = entry.replace(/(τεμ.)/g, ' Τεμάχια ');
     }
+
+    // Mr Grand
+    entry = entry.replace(/(MrGrand.)/g, 'Mr Grand ');
 
     // Replace double quotes with single
     entry = entry.replace(/"/g, "'");
