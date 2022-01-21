@@ -2,16 +2,22 @@
   "name": "masoutis",
   "version": "1.0.0",
   "description": "Masoutis XLS to SQLITE",
-  "main": "index.js",
+  "main": "masVisionCrawler.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "basic-ftp": "^4.6.6",
+    "express": "^4.17.2",
     "node-xlsx": "^0.17.2",
     "sqlite": "^4.0.23",
     "sqlite3": "^5.0.2",
     "xls-to-json": "^2.1.0"
+  },
+  "devDependencies": {
+    "convert-csv-to-json": "^1.3.1",
+    "node-cron": "^3.0.0"
   }
 }
