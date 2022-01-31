@@ -298,6 +298,7 @@ let filterEntryDescription = entry => {
         entry = entry.replace(/(ΓΡ. )|(ΓΡ.)/g, ' Γραμμάρια ');
         entry = entry.replace(/(γρ. )|(γρ.)/g, ' Γραμμάρια ');
         entry = entry.replace(/(ΓΡ)$/g, ' Γραμμάρια ');
+        entry = entry.replace(/(Γ)$/g, ' Γραμμάρια ');
     }
 
     // mL
@@ -315,6 +316,28 @@ let filterEntryDescription = entry => {
 
     // Mr Grand
     entry = entry.replace(/(MrGrand.)/g, 'Mr Grand ');
+
+    // Γλουτένη
+    entry = entry.replace(/(ΧΓΛΟΥΤΕΝΗ)/g, 'xωρίς γλουτένη');
+    entry = entry.replace(/(ΧΓΛΟΥΤ)/g, 'xωρίς γλουτένη');
+    entry = entry.replace(/(ΧΓΛ)/g, 'xωρίς γλουτένη');
+
+    entry = entry.replace(/(Χ ΓΛΟΥΤΕΝΗ)/g, 'xωρίς γλουτένη');
+    entry = entry.replace(/(Χ ΓΛΟΥΤ)/g, 'xωρίς γλουτένη');
+    entry = entry.replace(/(Χ ΓΛΟΥ)/g, 'xωρίς γλουτένη');
+
+    entry = entry.replace(/(ΧΩΡ ΓΛΟΥΤΕΝΗ)/g, 'xωρίς γλουτένη');
+    entry = entry.replace(/(ΧΩΡ ΓΛΟΥΤ)/g, 'xωρίς γλουτένη');
+
+    // Χωρίς Ζάχαρη
+    entry = entry.replace(/(Χ ΖΑΧ)/g, 'xωρίς ζάχαρη');
+    entry = entry.replace(/(ΧΩΡ ΖΑΧΑΡΗ)/g, 'xωρίς ζάχαρη');
+
+    // Δωρο
+    entry = entry.replace(/( ΔΩΡ )/g, ' δώρο ');
+
+    // ΦΑΚ
+    entry = entry.replace(/( ΦΑΚ )/g, ' φακελάκι ');
 
     // Replace double quotes with single
     entry = entry.replace(/"/g, "'");
