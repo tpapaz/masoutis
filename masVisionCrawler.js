@@ -264,11 +264,21 @@ let readCSV = async (db, desc) => {
 
                 let json = csvToJson.fieldDelimiter('|').getJsonFromCsv(parentPath + '/'+file);
 
-                Object.keys(json).forEach(function(key){
+                Object.keys(json).forEach(function(key) {
+
+                    // Filter label according to the description txt file
                     if (desc.get(json[key]['PLU'])) {
                         json[key]['description'] = desc.get(json[key]['PLU'])
                     }
                     json[key]['description'] = filterEntryDescription(json[key]['description']);
+
+                    // Change price if discount is present
+                    if (parseInt(json[key]['discount'], 10) !== 0) {
+                        json[key]['price'] = ( (parseFloat(json[key]['price']) * parseInt(json[key]['discount'], 10) ) / 100).toFixed(2);
+
+                        json[key]['extra'] = String(json[key]['discount']) + '% έκπτωση';
+                    }
+
                 });
                 await insertBarcodeRecords(db, json);
             }
@@ -315,7 +325,7 @@ let filterEntryDescription = entry => {
     }
 
     // Mr Grand
-    entry = entry.replace(/(MrGrand.)/g, 'Mr Grand ');
+    entry = entry.replace(/(MrGrand.)/g, 'Mr. Grand ');
 
     // Γλουτένη
     entry = entry.replace(/(ΧΓΛΟΥΤΕΝΗ)/g, 'xωρίς γλουτένη');
@@ -338,6 +348,9 @@ let filterEntryDescription = entry => {
 
     // ΦΑΚ
     entry = entry.replace(/( ΦΑΚ )/g, ' φακελάκι ');
+
+    // After all the substitutions make every label lowercase
+    entry = entry.toLowerCase();
 
     // Replace double quotes with single
     entry = entry.replace(/"/g, "'");
