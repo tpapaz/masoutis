@@ -6,7 +6,7 @@ const readline = require('readline');
 const sqlite3 = require("sqlite3");
 const ftp = require("basic-ftp")
 const { open } = require("sqlite");
-const { ftpConfig} = require("./config.js");
+const { ftpConfig } = require("./config.js");
 const cron = require("node-cron");
 const express = require("express");
 const app = express();
@@ -266,6 +266,8 @@ let readCSV = async (db, desc) => {
 
                 Object.keys(json).forEach(function(key) {
 
+                    let discount = 0;
+
                     // Filter label according to the description txt file
                     if (desc.get(json[key]['PLU'])) {
                         json[key]['description'] = desc.get(json[key]['PLU'])
@@ -274,7 +276,10 @@ let readCSV = async (db, desc) => {
 
                     // Change price if discount is present
                     if (parseInt(json[key]['discount'], 10) !== 0) {
-                        json[key]['price'] = ( (parseFloat(json[key]['price']) * parseInt(json[key]['discount'], 10) ) / 100).toFixed(2);
+
+                        discount = parseFloat(json[key]['price']) * (parseInt(json[key]['discount'], 10) / 100);
+
+                        json[key]['price'] = (parseFloat(json[key]['price']) - parseFloat(discount)).toFixed(2);
 
                         json[key]['extra'] = String(json[key]['discount']) + '% έκπτωση';
                     }
