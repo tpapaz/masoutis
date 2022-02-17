@@ -73,10 +73,9 @@ let updateFiles = async () => {
                 return (obj.type === 1 && obj.name !== 'EshopItems.txt')
             })
 
-            // Get latest file based on date modified.
-            let latest_file = barcodeFiles.reduce(function (r, a) {
-                return r.rawModifiedAt > a.rawModifiedAt ? r : a;
-            });
+            let latest_file = barcodeFiles[barcodeFiles.length-1];
+
+            console.log("LATEST: ", latest_file.name);
 
             // Replace local file with the one from FTP
             await client.downloadTo(path.join(__dirname, "data/barcodes/mas_new.csv"), "/"+latest_file.name);
@@ -274,6 +273,8 @@ let readCSV = async (db, desc) => {
                     }
                     json[key]['description'] = filterEntryDescription(json[key]['description']);
 
+                    json[key]['action'] = json[key]['action'].toLowerCase();
+
                     // Change price if discount is present
                     if (parseInt(json[key]['discount'], 10) !== 0) {
 
@@ -357,6 +358,8 @@ let filterEntryDescription = entry => {
     // After all the substitutions make every label lowercase
     entry = entry.toLowerCase();
 
+    // €
+    entry = entry.replace(/(€)/g, ' ευρώ ');
     // Replace double quotes with single
     entry = entry.replace(/"/g, "'");
 
