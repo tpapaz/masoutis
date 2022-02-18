@@ -4,7 +4,8 @@ const xls2json = require("xls-to-json");
 const csvToJson = require("convert-csv-to-json");
 const readline = require('readline');
 const sqlite3 = require("sqlite3");
-const ftp = require("basic-ftp")
+const ftp = require("basic-ftp");
+const AdmZip = require("adm-zip");
 const { open } = require("sqlite");
 const { ftpConfig } = require("./config.js");
 const cron = require("node-cron");
@@ -114,7 +115,6 @@ let updateDB = async () => {
         await db.exec("DROP TABLE IF EXISTS planograms;");
         await createPlanogramsTable(db);
         await readXLS(db, descriptions);
-
     } catch (error) {
         console.error(error);
     }
@@ -274,6 +274,8 @@ let readCSV = async (db, desc) => {
                     json[key]['description'] = filterEntryDescription(json[key]['description']);
 
                     json[key]['action'] = json[key]['action'].toLowerCase();
+
+                    json[key]['action'] = json[key]['action'].replace(/(omoia)/g, ' όμοια ');
 
                     // Change price if discount is present
                     if (parseInt(json[key]['discount'], 10) !== 0) {
