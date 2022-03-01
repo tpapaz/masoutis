@@ -21,7 +21,7 @@ app.get('/', function(req, res) {
 app.post('/update', async function(request, response){
 
     console.log("Started update");
-    //await updateFiles();
+    await updateFiles();
     await updateDB();
     response.send("Update successful!");
     console.log("Update successful");
