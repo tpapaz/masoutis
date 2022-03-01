@@ -21,7 +21,7 @@ app.get('/', function(req, res) {
 app.post('/update', async function(request, response){
 
     console.log("Started update");
-    await updateFiles();
+    //await updateFiles();
     await updateDB();
     response.send("Update successful!");
     console.log("Update successful");
@@ -227,10 +227,11 @@ let createProductsTable = async db => {
         await db.exec(`CREATE TABLE products (
                                                  "PLU" TEXT,
                                                  "description" TEXT,
-                                                 "price" TEXT,
+                                                 "initial_price" TEXT,
                                                  "discount" TEXT,
-                                                 "action" TEXT,
-                                                 "extra" TEXT
+                                                 "discount_label" TEXT,
+                                                 "final_price" TEXT,
+                                                 "action" TEXT
                        );`);
         console.log("TABLE 'products' created...");
     } catch (error) {
@@ -265,8 +266,6 @@ let readCSV = async (db, desc) => {
 
                 Object.keys(json).forEach(function(key) {
 
-                    let discount = 0;
-
                     // Filter label according to the description txt file
                     if (desc.get(json[key]['PLU'])) {
                         json[key]['description'] = desc.get(json[key]['PLU'])
@@ -274,18 +273,10 @@ let readCSV = async (db, desc) => {
                     json[key]['description'] = filterEntryDescription(json[key]['description']);
 
                     json[key]['action'] = json[key]['action'].toLowerCase();
-
                     json[key]['action'] = json[key]['action'].replace(/(omoia)/g, ' όμοια ');
 
-                    // Change price if discount is present
-                    if (parseInt(json[key]['discount'], 10) !== 0) {
-
-                        discount = parseFloat(json[key]['price']) * (parseInt(json[key]['discount'], 10) / 100);
-
-                        json[key]['price'] = (parseFloat(json[key]['price']) - parseFloat(discount)).toFixed(2);
-
-                        json[key]['extra'] = String(json[key]['discount']) + '% έκπτωση';
-                    }
+                    // Add discount label if discount is present
+                    json[key]['discount_label'] = parseInt(json[key]['discount'], 10) !== 0 ? String(json[key]['discount']) + '% έκπτωση' : '';
 
                 });
                 await insertBarcodeRecords(db, json);
@@ -298,7 +289,7 @@ let insertBarcodeRecords = async (db, json) => {
     try {
         let values = '';
         json.forEach((rec) => {
-            values += `("${rec.PLU}","${rec.description}","${rec.price}","${rec.discount}","${rec.action}","${rec.extra}"),`;
+            values += `("${rec.PLU}","${rec.description}","${rec.price}","${rec.discount}","${rec.discount_label}","${rec.extra}","${rec.action}"),`;
         });
 
         values = values.replace(/.$/, ";");
