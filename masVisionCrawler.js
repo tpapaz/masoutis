@@ -4,8 +4,6 @@ const xls2json = require("xls-to-json");
 const csvToJson = require("convert-csv-to-json");
 const readline = require('readline');
 const sqlite3 = require("sqlite3");
-const ftp = require("basic-ftp");
-const AdmZip = require("adm-zip");
 const { open } = require("sqlite");
 const { ftpConfig } = require("./config.js");
 const cron = require("node-cron");
@@ -44,12 +42,10 @@ cron.schedule('0 0 *!/2 * * *', async () => {
 let updateFiles = async () => {
 
     async function connect() {
-        const client = new ftp.Client()
-        client.ftp.verbose = true
-        try {
+        let Client = require('ssh2-sftp-client');
+        let sftp = new Client();
 
-            await client.access(ftpConfig)
-            let list = await client.list();
+        await sftp.connect(ftpConfig).then( async () => {
 
             // Delete planogram files from local directory
             let planogramDir = path.join(path.join(__dirname, "data/planograms"));
@@ -67,28 +63,37 @@ let updateFiles = async () => {
             });
 
             // Copy planograms from ftp to local dir
-            await client.downloadToDir(path.join(__dirname, "data/planograms"), 'evision ΠΛΑΝΟ');
-
-            // Get all files (not directories)
-            let barcodeFiles = list.filter(obj => {
-                return (obj.type === 1 && obj.name !== 'EshopItems.txt')
+            let planoList = await sftp.list('/script');
+            let planoFiles = planoList.filter(obj => {
+                return (obj.name.substr(obj.name.length - 3)  === 'xls')
             })
 
-            let latest_file = barcodeFiles[barcodeFiles.length-1];
+            for (let i=0; i<planoFiles.length-1; i++) {
+                await sftp.get('/script/'+planoFiles[i].name, path.join(__dirname, "data/planograms/"+planoFiles[i].name));
+            }
+            console.log("PLANOGRAMS TRANSFERRED");
 
+            // Get all files (not directories)
+            let list = await sftp.list('');
+            let barcodeFiles = list.filter(obj => {
+                return (obj.name.substr(obj.name.length - 3)  === 'csv')
+            })
+            let latest_file = barcodeFiles[barcodeFiles.length-1];
             console.log("LATEST: ", latest_file.name);
 
             // Replace local file with the one from FTP
-            await client.downloadTo(path.join(__dirname, "data/barcodes/mas_new.csv"), "/"+latest_file.name);
+            await sftp.get("/"+latest_file.name, path.join(__dirname, "data/barcodes/mas_new.csv"));
 
             // Get TXT file
-            await client.downloadTo(path.join(__dirname, "data/desc/desc.txt"), "/EshopItems.txt");
+            await sftp.get("/EshopItems.txt", path.join(__dirname, "data/desc/desc.txt"));
 
-        }
-        catch(err) {
-            console.log(err);
-        }
-        client.close();
+
+        }).then(data => {
+            console.log('Download END');
+            sftp.end();
+        }).catch(err => {
+            console.log(err, 'catch error');
+        });
     }
 
     await connect();
@@ -190,7 +195,9 @@ let readXLS = async (db, desc) => {
                                 if (desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ']) ) {
                                     result[key]['Προϊόν'] = desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ'])
                                 }
-                                result[key]['Προϊόν'] = filterEntryDescription(result[key]['Προϊόν']);
+                                if (result[key]['Προϊόν']) {
+                                    result[key]['Προϊόν'] = filterEntryDescription(result[key]['Προϊόν']);
+                                }
 
                             });
                             await insertPlanogramRecords(db, result, fk);
