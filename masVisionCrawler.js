@@ -1,3 +1,5 @@
+"use strict";
+
 const path = require("path");
 const fs = require("fs");
 const xls2json = require("xls-to-json");
@@ -42,8 +44,9 @@ cron.schedule('0 0 *!/2 * * *', async () => {
 let updateFiles = async () => {
 
     async function connect() {
-        let Client = require('ssh2-sftp-client');
-        let sftp = new Client();
+
+        const Client = require('ssh2-sftp-client');
+        const sftp = new Client();
 
         await sftp.connect(ftpConfig).then( async () => {
 
@@ -95,7 +98,6 @@ let updateFiles = async () => {
             console.log(err, 'catch error');
         });
     }
-
     await connect();
 }
 
@@ -170,43 +172,44 @@ let parseDescriptions = async () => {
 // Read xls files from planograms
 let readXLS = async (db, desc) => {
     const directoryPath = path.join(__dirname, "data/planograms");
-    fs.readdir(directoryPath, function (err, files) {
-        if (err) {
-            return console.log("Unable to scan directory: " + err);
-        }
 
-        files.forEach(function (file) {
-            if (path.extname(file) === ".xls") {
-                const fk0 = file.split("_")[0];
-                const fk = fk0.split(" ")[0];
-                xls2json(
-                    {
-                        input: directoryPath + "/" + file, // input xls
-                        rowsToSkip: 6,
-                        allowEmptyKey: false,
-                    },
-                    async function (err, result) {
-                        if (err) {
-                            console.log(err);
-                        } else {
+    const fileNames = await fs.promises.readdir(directoryPath);
+    for (let file of fileNames) {
 
-                            Object.keys(result).forEach(function(key){
+        const absolutePath = path.join(directoryPath, file);
 
-                                if (desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ']) ) {
-                                    result[key]['Προϊόν'] = desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ'])
-                                }
-                                if (result[key]['Προϊόν']) {
-                                    result[key]['Προϊόν'] = filterEntryDescription(result[key]['Προϊόν']);
-                                }
+        if (path.extname(file) === ".xls") {
 
-                            });
-                            await insertPlanogramRecords(db, result, fk);
-                        }
+            const fk0 = file.split("_")[0];
+            const fk = fk0.split(" ")[0];
+
+            await xls2json(
+                {
+                    input: absolutePath, // input xls
+                    rowsToSkip: 6,
+                    allowEmptyKey: false,
+                },
+                async function (err, result) {
+                    if (err) {
+                        console.log(err);
+                    } else {
+
+                        Object.keys(result).forEach(function(key){
+
+                            if (desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ']) ) {
+                                result[key]['Προϊόν'] = desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ'])
+                            }
+                            if (result[key]['Προϊόν']) {
+                                result[key]['Προϊόν'] = filterEntryDescription(result[key]['Προϊόν']);
+                            }
+
+                        });
+                        await insertPlanogramRecords(db, result, fk);
                     }
-                );
-            }
-        });
-    });
+                }
+            );
+        }
+    }
 }
 
 // insert records to table planograms
