@@ -194,17 +194,17 @@ let readXLS = async (db, desc) => {
                         console.log(err);
                     } else {
 
-                        Object.keys(result).forEach(function(key){
-
+                        const promises = Object.keys(result).map(async (key) => {
                             if (desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ']) ) {
                                 result[key]['Προϊόν'] = desc.get(result[key]['ΦΟΡ. ΚΩΔΙΚΟΣ'])
                             }
                             if (result[key]['Προϊόν']) {
                                 result[key]['Προϊόν'] = filterEntryDescription(result[key]['Προϊόν']);
                             }
-
                         });
-                        await insertPlanogramRecords(db, result, fk);
+                        await Promise.all(promises).then(async (values) => {
+                            await insertPlanogramRecords(db, result, fk);
+                        });
                     }
                 }
             );
