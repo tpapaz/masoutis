@@ -20,11 +20,24 @@ app.get('/', function(req, res) {
 
 app.post('/update', async function(request, response){
 
-    console.log("Started update");
-    await updateFiles();
-    await updateDB();
+    let stores = ['189','620'];
+
+    // Run update for every store
+    for (let i=0; i<stores.length; i++) {
+        console.log("Started update for: ", stores[i]);
+        await updateFiles(stores[i]);
+
+        let dbPath = path.join(__dirname, "out/"+stores[i]+"/masoutisdb.sqlite");
+        if (stores[i] == '189') {
+            dbPath = path.join(__dirname, "out/masoutisdb.sqlite");
+        }
+
+        const db = await createDbConnection(dbPath);
+
+        await updateDB(db, stores[i]);
+        console.log(stores[i], ": Update successful!");
+    }
     response.send("Update successful!");
-    console.log("Update successful");
 });
 
 app.listen(4343);
@@ -33,15 +46,19 @@ app.listen(4343);
 cron.schedule('0 0 *!/2 * * *', async () => {
     console.log('Running a job every 2 hrs');
 
-    await updateFiles();
-    await updateDB();
+    let stores = ['189','620'];
+    // Run update for every store
+    for (let i=0; i<stores.length; i++) {
+        await updateFiles(stores[i]);
+        await updateDB(stores[i]);
+    }
 
 }, {
     scheduled: true,
     timezone: "Europe/Athens"
 });
 
-let updateFiles = async () => {
+let updateFiles = async (store) => {
 
     async function connect() {
 
@@ -51,7 +68,7 @@ let updateFiles = async () => {
         await sftp.connect(ftpConfig).then( async () => {
 
             // Delete planogram files from local directory
-            let planogramDir = path.join(path.join(__dirname, "data/planograms"));
+            let planogramDir = path.join(path.join(__dirname, "data/"+store+"/planograms"));
             fs.readdir(planogramDir, (err, files) => {
                 if (err) throw err;
 
@@ -66,18 +83,18 @@ let updateFiles = async () => {
             });
 
             // Copy planograms from ftp to local dir
-            let planoList = await sftp.list('/script');
+            let planoList = await sftp.list(store +'/plano/evision ΠΛΑΝΟ');
             let planoFiles = planoList.filter(obj => {
                 return (obj.name.substr(obj.name.length - 3)  === 'xls')
             })
 
             for (let i=0; i<planoFiles.length-1; i++) {
-                await sftp.get('/script/'+planoFiles[i].name, path.join(__dirname, "data/planograms/"+planoFiles[i].name));
+                await sftp.get(store +'/plano/evision ΠΛΑΝΟ/'+planoFiles[i].name, path.join(__dirname, "data/"+store+"/planograms/"+planoFiles[i].name));
             }
-            console.log("PLANOGRAMS TRANSFERRED");
+            console.log("Store: ", store, " PLANOGRAMS TRANSFERRED");
 
             // Get all files (not directories)
-            let list = await sftp.list('');
+            let list = await sftp.list('/'+store);
             let barcodeFiles = list.filter(obj => {
                 return (obj.name.substr(obj.name.length - 3)  === 'csv')
             })
@@ -85,14 +102,14 @@ let updateFiles = async () => {
             console.log("LATEST: ", latest_file.name);
 
             // Replace local file with the one from FTP
-            await sftp.get("/"+latest_file.name, path.join(__dirname, "data/barcodes/mas_new.csv"));
+            await sftp.get("/"+store+"/"+latest_file.name, path.join(__dirname, "data/"+store+"/barcodes/mas_new.csv"));
 
             // Get TXT file
-            await sftp.get("/EshopItems.txt", path.join(__dirname, "data/desc/desc.txt"));
+            await sftp.get("/"+store+"/EshopItems.txt", path.join(__dirname, "data/"+store+"/desc/desc.txt"));
 
 
         }).then(data => {
-            console.log('Download END');
+            console.log(store +': Download END');
             sftp.end();
         }).catch(err => {
             console.log(err, 'catch error');
@@ -108,20 +125,28 @@ let createDbConnection = filename => {
     });
 };
 
-let updateDB = async () => {
+let updateDB = async (db, store) => {
     try {
         sqlite3.verbose();
-        const db = await createDbConnection(path.join(__dirname, "out/masoutisdb.sqlite"));
+
+        /*let db;
+
+        if (store == '189') {
+            db = await createDbConnection(path.join(__dirname, "out/masoutisdb.sqlite"));
+        } else {
+            db = await createDbConnection(path.join(__dirname, "out/"+store+"/masoutisdb.sqlite"));
+        }*/
 
         await db.exec("DROP TABLE IF EXISTS products;");
         await createProductsTable(db);
-        const descriptions = await parseDescriptions();
 
-        await readCSV(db, descriptions);
+        const descriptions = await parseDescriptions(store);
+        await readCSV(db, descriptions, store);
 
         await db.exec("DROP TABLE IF EXISTS planograms;");
         await createPlanogramsTable(db);
-        await readXLS(db, descriptions);
+        await readXLS(db, descriptions, store);
+
     } catch (error) {
         console.error(error);
     }
@@ -145,13 +170,13 @@ let createPlanogramsTable = async db => {
     }
 };
 
-let parseDescriptions = async () => {
+let parseDescriptions = async (store) => {
 
     let descMap = new Map();
     descMap = await processLineByLine(descMap);
 
     async function processLineByLine(map) {
-        const fileStream = fs.createReadStream(path.join(__dirname,'/data/desc/desc.txt'), 'utf16le');
+        const fileStream = fs.createReadStream(path.join(__dirname,'/data/'+store+'/desc/desc.txt'), 'utf16le');
 
         const rl = readline.createInterface({
             input: fileStream,
@@ -170,8 +195,8 @@ let parseDescriptions = async () => {
 }
 
 // Read xls files from planograms
-let readXLS = async (db, desc) => {
-    const directoryPath = path.join(__dirname, "data/planograms");
+let readXLS = async (db, desc, store) => {
+    const directoryPath = path.join(__dirname, "data/"+store+"/planograms");
 
     const fileNames = await fs.promises.readdir(directoryPath);
     for (let file of fileNames) {
@@ -251,8 +276,8 @@ let createProductsTable = async db => {
 
 
 // Read CSV file
-let readCSV = async (db, desc) => {
-    const directoryPath = path.join(__dirname, "data/barcodes");
+let readCSV = async (db, desc, store) => {
+    const directoryPath = path.join(__dirname, "data/"+store+"/barcodes");
     const parentPath = path.join(__dirname, "data");
     fs.readdir(directoryPath, function (err, files) {
         if (err) {
