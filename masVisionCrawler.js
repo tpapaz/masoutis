@@ -50,7 +50,14 @@ cron.schedule('0 0 *!/2 * * *', async () => {
     // Run update for every store
     for (let i=0; i<stores.length; i++) {
         await updateFiles(stores[i]);
-        await updateDB(stores[i]);
+
+        let dbPath = path.join(__dirname, "out/"+stores[i]+"/masoutisdb.sqlite");
+        if (stores[i] == '189') {
+            dbPath = path.join(__dirname, "out/masoutisdb.sqlite");
+        }
+
+        const db = await createDbConnection(dbPath);
+        await updateDB(db, stores[i]);
     }
 
 }, {
