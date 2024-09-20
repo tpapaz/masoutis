@@ -51,6 +51,7 @@ cron.schedule('0 0 *!/2 * * *', async () => {
     for (let i=0; i<stores.length; i++) {
         await updateFiles(stores[i]);
 
+        // Change this when the mobile app is updated
         let dbPath = path.join(__dirname, "out/"+stores[i]+"/masoutisdb.sqlite");
         if (stores[i] == '189') {
             dbPath = path.join(__dirname, "out/masoutisdb.sqlite");
