@@ -235,7 +235,7 @@ let readXLS = async (db, desc, store) => {
                             }
                         });
                         await Promise.all(promises).then(async (values) => {
-                            await insertPlanogramRecords(db, result, fk);
+                            await insertPlanogramRecords(db, result, fk, file);
                         });
                     }
                 }
@@ -245,7 +245,7 @@ let readXLS = async (db, desc, store) => {
 }
 
 // insert records to table planograms
-let insertPlanogramRecords = async (db, json, fk) => {
+let insertPlanogramRecords = async (db, json, fk, file) => {
     try {
         let values = "";
         json.forEach((rec) => {
@@ -259,6 +259,7 @@ let insertPlanogramRecords = async (db, json, fk) => {
         await db.exec(`INSERT INTO planograms VALUES ${values}`);
         console.log(fk, " inserted");
     } catch (error) {
+        console.error(file);
         console.error(error);
     }
 };
